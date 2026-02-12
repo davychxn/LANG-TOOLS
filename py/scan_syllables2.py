@@ -63,7 +63,7 @@ json_obj["syllables_maps_list"] = syllables_maps_list
 
 json_str = json.dumps(json_obj)
 
-with open("./syllables_data.json", "w") as f:
+with open("../output/syllables_data.json", "w") as f:
     f.write(json_str)
 
 print("Json exported.")
