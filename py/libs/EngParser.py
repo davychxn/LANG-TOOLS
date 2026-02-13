@@ -109,7 +109,15 @@ class EngParser:
                         self.set_path("LN{}".format(inspect.currentframe().f_lineno))
                 
                 else:
-                    if (
+                    if self.is_L(col) and (next_col is not None) and self.is_N(next_col) and (next_col2 is None):
+                        # Example abeln
+                        syl_name = "_".join(syllable)
+                        syllables_map[syl_name] = syllable
+                        sound_map[syl_name] = syllable
+                        syllable = [col]
+                        self.set_path("LN{}".format(inspect.currentframe().f_lineno))
+                    
+                    elif (
                             (not self.is_NG(col)) and
                             (next_col is not None) and
                             self.is_nasal(next_col) and
@@ -248,7 +256,15 @@ class EngParser:
                 else:
                     if len(syllable) == 1:
                         if next_col is None:
-                            if self.is_Y(col):
+                            if self.is_prev_L(syllable) and self.is_N(col):
+                                # Example abeln
+                                syllable.append(col)
+                                syl_name = "_".join(syllable)
+                                sound_map[syl_name] = syllable
+                                syllable = []
+                                self.set_path("LN{}".format(inspect.currentframe().f_lineno))
+                            
+                            elif self.is_Y(col):
                                 # Example MONTAGNE
                                 syllable.append(col)
                                 syl_name = "_".join(syllable)
@@ -303,14 +319,7 @@ class EngParser:
                             
                         else:
                             if syllable[-1] != col:
-                                if self.is_prev_L(syllable) and self.is_N(col):
-                                    # Example abeln
-                                    syl_name = "_".join(syllable)
-                                    syllables_map[syl_name] = syllable
-                                    sound_map[syl_name] = syllable
-                                    syllable = [syllable[-1], col]
-                                    
-                                elif (next_col is None) or self.is_consonant(next_col):
+                                if (next_col is None) or self.is_consonant(next_col):
                                     syllable.append(col)
                                     self.set_path("LN{}".format(inspect.currentframe().f_lineno))
                                     
