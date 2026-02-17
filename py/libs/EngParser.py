@@ -69,7 +69,11 @@ class EngParser:
             
             # TAG001
             if self.is_prev_vowel(syllable):
-                if self.is_consonant(col):
+                if self.is_K(col) and self.is_S(next_col):
+                    syllable.append(col)
+                    self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                
+                elif self.is_consonant(col):
                     syl_name = "_".join(syllable)
                     syllables_map[syl_name] = syllable
                     sound_map[syl_name] = syllable
@@ -199,7 +203,14 @@ class EngParser:
                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                 elif self.is_consonant(col):
-                    if self.is_double_consonants(syllable[-1], col):
+                    if self.is_prev_K(syllable) and self.is_S(col) and (self.is_consonant(next_col) or next_col is None):
+                        syllable.append(col)
+                        syl_name = "_".join(syllable)
+                        sound_map[syl_name] = syllable
+                        syllable = []
+                        self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                    
+                    elif self.is_double_consonants(syllable[-1], col):
                         syllable.append(col)
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
@@ -435,6 +446,14 @@ class EngParser:
     def is_prev_Y(self, phonems):
         self.verify_list(phonems)
         return phonems[-1] in self.DOUBLE_CONNECTIVE
+        
+    def is_prev_K(self, phonems):
+        self.verify_list(phonems)
+        return phonems[-1] == 'K'
+        
+    def is_prev_S(self, phonems):
+        self.verify_list(phonems)
+        return phonems[-1] == 'S'
 
     def is_prev_UW(self, phonems):
         self.verify_list(phonems)
@@ -499,6 +518,14 @@ class EngParser:
     def is_N(self, phonem):
         self.verify_str(phonem)
         return phonem == self.NASAL_STOPS[1]
+        
+    def is_K(self, phonem):
+        self.verify_str(phonem)
+        return phonem == 'K'
+        
+    def is_S(self, phonem):
+        self.verify_str(phonem)
+        return phonem == 'S'
 
     def is_double_consonants(self, prev, cur):
         self.verify_str(prev)
