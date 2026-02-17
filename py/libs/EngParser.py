@@ -213,12 +213,18 @@ class EngParser:
                 else:
                     # TAG005
                     if self.is_Y(col):
-                        syllable.append(col)
-                        syl_name = "_".join(syllable)
-                        syllables_map[syl_name] = syllable
-                        sound_map[syl_name] = syllable
-                        syllable = [col]
-                        self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                        if self.is_vowel(next_col):
+                            # Cosonant + Y + Vowel + (, M, N, NG, L, R) syllable
+                            syllable.append(col)
+                            self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+
+                        else:
+                            syllable.append(col)
+                            syl_name = "_".join(syllable)
+                            syllables_map[syl_name] = syllable
+                            sound_map[syl_name] = syllable
+                            syllable = [col]
+                            self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     elif self.is_R(col):
                         if self.is_double_consonants(syllable[-1], col):
