@@ -69,16 +69,25 @@ class EngParser:
             
             # TAG001
             if self.is_prev_vowel(syllable):
-                if self.is_K(col) and self.is_S(next_col):
-                    syllable.append(col)
-                    self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
-                
-                elif self.is_consonant(col):
-                    syl_name = "_".join(syllable)
-                    syllables_map[syl_name] = syllable
-                    sound_map[syl_name] = syllable
-                    syllable = [col]
-                    self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                if self.is_consonant(col):
+                    if self.is_K(col) and next_col is not None and self.is_S(next_col):
+                        syllable.append(col)
+                        self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                    
+                    elif next_col is None:
+                        syllable.append(col)
+                        syl_name = "_".join(syllable)
+                        syllables_map[syl_name] = syllable
+                        sound_map[syl_name] = syllable
+                        syllable = []
+                        self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                    
+                    else:
+                        syl_name = "_".join(syllable)
+                        syllables_map[syl_name] = syllable
+                        sound_map[syl_name] = syllable
+                        syllable = [col]
+                        self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                 
                 elif self.is_vowel(col):
                     if (
@@ -113,6 +122,7 @@ class EngParser:
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                 
                 else:
+                    # Other than vowels and consonants
                     if self.is_L(col) and (next_col is not None) and self.is_N(next_col) and (next_col2 is None):
                         # Example abeln
                         syl_name = "_".join(syllable)
@@ -142,12 +152,17 @@ class EngParser:
                     else:
                         # TAG002
                         if self.is_nasal(col):
-                            syllable.append(col)
-                            syl_name = "_".join(syllable)
-                            syllables_map[syl_name] = syllable
-                            sound_map[syl_name] = syllable
-                            syllable = [col]
-                            self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                            if next_col is not None and self.is_S(next_col) and next_col2 is None:
+                                syllable.append(col)
+                                self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                                
+                            else:
+                                syllable.append(col)
+                                syl_name = "_".join(syllable)
+                                syllables_map[syl_name] = syllable
+                                sound_map[syl_name] = syllable
+                                syllable = [col]
+                                self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                         # TAG003
                         elif self.is_R(col):
@@ -203,7 +218,7 @@ class EngParser:
                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                 elif self.is_consonant(col):
-                    if self.is_prev_K(syllable) and self.is_S(col) and (self.is_consonant(next_col) or next_col is None):
+                    if self.is_prev_K(syllable) and self.is_S(col) and ((next_col is not None and self.is_consonant(next_col)) or next_col is None):
                         syllable.append(col)
                         syl_name = "_".join(syllable)
                         sound_map[syl_name] = syllable
@@ -267,6 +282,14 @@ class EngParser:
                     if len(syllable) == 1:
                         # Discard
                         syllable = [col]
+                        self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                        
+                    elif (self.is_prev_N(syllable) or self.is_prev_NG(syllable)) and self.is_S(col) and next_col is None:
+                        syllable.append(col)
+                        syl_name = "_".join(syllable)
+                        syllables_map[syl_name] = syllable
+                        sound_map[syl_name] = syllable
+                        syllable = []
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                     else:
@@ -454,6 +477,18 @@ class EngParser:
     def is_prev_S(self, phonems):
         self.verify_list(phonems)
         return phonems[-1] == 'S'
+        
+    def is_prev_M(self, phonems):
+        self.verify_list(phonems)
+        return phonems[-1] == self.NASAL_STOPS[0]
+        
+    def is_prev_N(self, phonems):
+        self.verify_list(phonems)
+        return phonems[-1] == self.NASAL_STOPS[1]
+        
+    def is_prev_NG(self, phonems):
+        self.verify_list(phonems)
+        return phonems[-1] == self.NASAL_STOPS[2]
 
     def is_prev_UW(self, phonems):
         self.verify_list(phonems)
