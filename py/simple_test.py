@@ -12,7 +12,8 @@ check_list = [
     "K AH0 M P Y UW1 T ER0",
     "IH0 K S P IH1 R IY0 AH0 N S",
     "IH2 N F AO2 R M EY1 SH AH0 N",
-    "K AA1 R B Y ER0 EH2 T"
+    "K AA1 R B Y ER0 EH2 T",
+    "IH0 K S P AE1 N SH AH0 N Z"
 ]
 
 for item in check_list:

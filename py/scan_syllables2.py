@@ -58,7 +58,7 @@ print(len(syllables_all))
 #print(syllables_maps_list)
 
 json_obj = {}
-json_obj["syllables_all"] = syllables_all
+# json_obj["syllables_all"] = syllables_all
 json_obj["syllables_maps_list"] = syllables_maps_list
 
 json_str = json.dumps(json_obj)

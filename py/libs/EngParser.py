@@ -152,7 +152,7 @@ class EngParser:
                     else:
                         # TAG002
                         if self.is_nasal(col):
-                            if next_col is not None and self.is_S(next_col) and next_col2 is None:
+                            if next_col is not None and (self.is_S(next_col) or self.is_Z(next_col) or self.is_T(next_col)) and next_col2 is None:
                                 syllable.append(col)
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                 
@@ -284,7 +284,7 @@ class EngParser:
                         syllable = [col]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
-                    elif (self.is_prev_N(syllable) or self.is_prev_NG(syllable)) and self.is_S(col) and next_col is None:
+                    elif (self.is_prev_N(syllable) or self.is_prev_NG(syllable)) and (self.is_S(col) or self.is_Z(col) or self.is_T(col)) and next_col is None:
                         syllable.append(col)
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
@@ -561,6 +561,14 @@ class EngParser:
     def is_S(self, phonem):
         self.verify_str(phonem)
         return phonem == 'S'
+        
+    def is_Z(self, phonem):
+        self.verify_str(phonem)
+        return phonem == 'Z'
+        
+    def is_T(self, phonem):
+        self.verify_str(phonem)
+        return phonem == 'T'
 
     def is_double_consonants(self, prev, cur):
         self.verify_str(prev)
