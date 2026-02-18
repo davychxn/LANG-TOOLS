@@ -82,6 +82,20 @@ class EngParser:
                         syllable = []
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
+                    elif next_col is not None and (self.is_consonant(next_col) or self.is_R(next_col) or self.is_L(next_col)):
+                        if next_col2 is not None:
+                            syllable.append(col)
+                            syl_name = "_".join(syllable)
+                            syllables_map[syl_name] = syllable
+                            sound_map[syl_name] = syllable
+                            syllable = []
+                            self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                            
+                        else:
+                            # Example microsoft
+                            syllable.append(col)
+                            self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                    
                     else:
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
@@ -227,6 +241,14 @@ class EngParser:
                     
                     elif self.is_double_consonants(syllable[-1], col):
                         syllable.append(col)
+                        self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
+                    
+                    elif next_col is None:
+                        # Example microsoft
+                        syllable.append(col)
+                        syl_name = "_".join(syllable)
+                        sound_map[syl_name] = syllable
+                        syllable = []
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     else:
