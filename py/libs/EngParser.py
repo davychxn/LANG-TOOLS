@@ -93,7 +93,10 @@ class EngParser:
                             
                         else:
                             # Example microsoft
-                            syllable.append(col)
+                            syl_name = "_".join(syllable)
+                            syllables_map[syl_name] = syllable
+                            sound_map[syl_name] = syllable
+                            syllable = [col]
                             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     else:
