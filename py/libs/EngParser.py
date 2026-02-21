@@ -1,6 +1,16 @@
 import re
 import inspect
 
+class UniqueKeyDict(dict):
+    def __setitem__(self, key, value):
+        resolved_key = key
+        if resolved_key in self:
+            index = 2
+            while f"{key}#{index}" in self:
+                index += 1
+            resolved_key = f"{key}#{index}"
+        super().__setitem__(resolved_key, value)
+
 class EngParser:
     def __init__(self):
         self.VOWELS = ['AH', 'EY', 'ER', 'AO', 'UW', 'IH', 'AA', 'IY', 'EH', 'AE', 'OW', 'AW', 'AY', 'UH', 'OY']
@@ -74,8 +84,8 @@ class EngParser:
         return stress_map, syllable_stress_map
 
     def extract_syllables(self, phonems, is_print=False):
-        syllables_map = {}
-        sound_map = {}
+        syllables_map = UniqueKeyDict()
+        sound_map = UniqueKeyDict()
         stress_map = {}
         syllable_stress_map = {}
         original_phonemes = []
