@@ -19,8 +19,10 @@ check_list = [
 ]
 
 for item in check_list:
-    map1, map2 = eng_parser.extract_syllables(item, True)
+    map1, map2, stress_map, syllable_stress_map = eng_parser.extract_syllables(item, True)
 
     print(map1)
     print(map2)
+    print(stress_map)
+    print(syllable_stress_map)
     print("\n")

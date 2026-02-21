@@ -36,7 +36,7 @@ with open(filename, 'r', encoding='latin-1') as file:
                 continue
             
             eng_parser = EngParser()
-            map1, map2 = eng_parser.extract_syllables(marks_str)
+            map1, map2, map3, map4 = eng_parser.extract_syllables(marks_str)
             
             use_map = map2
             

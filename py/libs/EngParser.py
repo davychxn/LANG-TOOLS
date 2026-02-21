@@ -25,45 +25,100 @@ class EngParser:
         
         self.parse_path = []
 
+    def split_phoneme_stress(self, phonem):
+        self.verify_str(phonem)
+        base = re.sub('[^a-zA-Z]+', '', phonem)
+        stress = None
+        for char in phonem:
+            if char.isdigit():
+                stress = int(char)
+                break
+        return base, stress
+
+    def get_syllable_stress(self, stress_list):
+        self.verify_list(stress_list)
+        for stress in stress_list:
+            if stress is not None:
+                return stress
+        return None
+
+    def rebuild_stress_maps(self, sound_map, original_phonemes):
+        stress_map = {}
+        syllable_stress_map = {}
+
+        original_index = 0
+
+        for syl_name, phones in sound_map.items():
+            stress_list = []
+
+            for phone in phones:
+                matched_index = None
+                for i in range(original_index, len(original_phonemes)):
+                    if original_phonemes[i][0] == phone:
+                        matched_index = i
+                        break
+
+                if matched_index is None:
+                    stress_list.append(None)
+                else:
+                    stress_list.append(original_phonemes[matched_index][1])
+                    original_index = matched_index + 1
+
+            stress_map[syl_name] = stress_list
+
+            if len(stress_list) > 0:
+                syllable_stress_map[syl_name] = next((s for s in stress_list if s is not None), None)
+            else:
+                syllable_stress_map[syl_name] = None
+
+        return stress_map, syllable_stress_map
+
     def extract_syllables(self, phonems, is_print=False):
         syllables_map = {}
         sound_map = {}
+        stress_map = {}
+        syllable_stress_map = {}
+        original_phonemes = []
         self.parse_path = []
         
         line = phonems.strip()
         if len(line) == 0:
             # Skip empty line
             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
-            return syllables_map, sound_map
+            return syllables_map, sound_map, stress_map, syllable_stress_map
             
         row = line.split(" ")
         if len(row) == 0:
             # Skip useless lines
             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
-            return syllables_map, sound_map
+            return syllables_map, sound_map, stress_map, syllable_stress_map
             
         syllable = []
+        syllable_stresses = []
         for i in range(len(row)):
             # Filter tones
-            col = re.sub('[^a-zA-Z]+', '', row[i])
+            col, col_stress = self.split_phoneme_stress(row[i])
             if len(col) == 0:
                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                 continue
+
+            original_phonemes.append((col, col_stress))
             
             next_col = None
             if (i + 1) < len(row):
                 # Has next col
-                next_col = re.sub('[^a-zA-Z]+', '', row[i + 1])
+                next_col, _ = self.split_phoneme_stress(row[i + 1])
                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
             
             next_col2 = None
             if (i + 2) < len(row):
                 # Has next second col
-                next_col2 = re.sub('[^a-zA-Z]+', '', row[i + 2])
+                next_col2, _ = self.split_phoneme_stress(row[i + 2])
                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
             
             if len(syllable) == 0:
                 syllable.append(col)
+                syllable_stresses.append(col_stress)
                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                 continue
             
@@ -72,23 +127,32 @@ class EngParser:
                 if self.is_consonant(col):
                     if self.is_K(col) and next_col is not None and self.is_S(next_col):
                         syllable.append(col)
+                        syllable_stresses.append(col_stress)
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     elif next_col is None:
                         syllable.append(col)
+                        syllable_stresses.append(col_stress)
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = []
+                        syllable_stresses = []
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     elif next_col is not None and (self.is_consonant(next_col) or self.is_R(next_col) or self.is_L(next_col)):
                         if next_col2 is not None:
                             syllable.append(col)
+                            syllable_stresses.append(col_stress)
                             syl_name = "_".join(syllable)
                             syllables_map[syl_name] = syllable
                             sound_map[syl_name] = syllable
+                            stress_map[syl_name] = syllable_stresses
+                            syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                             syllable = []
+                            syllable_stresses = []
                             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                             
                         else:
@@ -96,14 +160,20 @@ class EngParser:
                             syl_name = "_".join(syllable)
                             syllables_map[syl_name] = syllable
                             sound_map[syl_name] = syllable
+                            stress_map[syl_name] = syllable_stresses
+                            syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                             syllable = [col]
+                            syllable_stresses = [col_stress]
                             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     else:
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = [col]
+                        syllable_stresses = [col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                 
                 elif self.is_vowel(col):
@@ -116,8 +186,11 @@ class EngParser:
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         phonem_W = self.get_W()
                         syllable = [phonem_W, col]
+                        syllable_stresses = [None, col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                     elif self.is_prev_ER(syllable):
@@ -125,8 +198,11 @@ class EngParser:
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         phonem_R = self.get_R()
                         syllable = [phonem_R, col]
+                        syllable_stresses = [None, col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                     else:
@@ -135,7 +211,10 @@ class EngParser:
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = [col]
+                        syllable_stresses = [col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                 
                 else:
@@ -145,7 +224,10 @@ class EngParser:
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = [col]
+                        syllable_stresses = [col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     elif self.is_L(col) and (next_col is not None) and self.is_N(next_col) and (next_col2 is not None) and self.is_consonant(next_col2):
@@ -153,7 +235,10 @@ class EngParser:
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = [col]
+                        syllable_stresses = [col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     elif (
@@ -164,6 +249,7 @@ class EngParser:
                        ):
                         # Example Arm, Armstrong, ABELN, exclude MONTAGNE
                         syllable.append(col)
+                        syllable_stresses.append(col_stress)
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                     else:
@@ -171,23 +257,32 @@ class EngParser:
                         if self.is_nasal(col):
                             if next_col is not None and (self.is_S(next_col) or self.is_Z(next_col) or self.is_T(next_col)) and next_col2 is None:
                                 syllable.append(col)
+                                syllable_stresses.append(col_stress)
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                 
                             else:
                                 syllable.append(col)
+                                syllable_stresses.append(col_stress)
                                 syl_name = "_".join(syllable)
                                 syllables_map[syl_name] = syllable
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = syllable_stresses
+                                syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                 syllable = [col]
+                                syllable_stresses = [col_stress]
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                         # TAG003
                         elif self.is_R(col):
                             syllable.append(col)
+                            syllable_stresses.append(col_stress)
                             syl_name = "_".join(syllable)
                             syllables_map[syl_name] = syllable
                             sound_map[syl_name] = syllable
+                            stress_map[syl_name] = syllable_stresses
+                            syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                             syllable = [col]
+                            syllable_stresses = [col_stress]
                             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                         # TAG006
@@ -197,24 +292,35 @@ class EngParser:
                                     syl_name = "_".join(syllable)
                                     syllables_map[syl_name] = syllable
                                     sound_map[syl_name] = syllable
+                                    stress_map[syl_name] = syllable_stresses
+                                    syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                     syllable = [col]
+                                    syllable_stresses = [col_stress]
                                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                     
                                 else:
                                     # ZUELKE, ZUHLKE
                                     syllable.append(col)
+                                    syllable_stresses.append(col_stress)
                                     syl_name = "_".join(syllable)
                                     syllables_map[syl_name] = syllable
                                     sound_map[syl_name] = syllable
+                                    stress_map[syl_name] = syllable_stresses
+                                    syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                     syllable = []
+                                    syllable_stresses = []
                                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                 
                             else:
                                 syllable.append(col)
+                                syllable_stresses.append(col_stress)
                                 syl_name = "_".join(syllable)
                                 syllables_map[syl_name] = syllable
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = syllable_stresses
+                                syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                 syllable = []
+                                syllable_stresses = []
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                         # TAG004
@@ -222,7 +328,10 @@ class EngParser:
                             syl_name = "_".join(syllable)
                             syllables_map[syl_name] = syllable
                             sound_map[syl_name] = syllable
+                            stress_map[syl_name] = syllable_stresses
+                            syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                             syllable = [col]
+                            syllable_stresses = [col_stress]
                             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                             
                         else:
@@ -232,33 +341,46 @@ class EngParser:
             elif self.is_prev_consonant(syllable):
                 if self.is_vowel(col):
                     syllable.append(col)
+                    syllable_stresses.append(col_stress)
                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                 elif self.is_consonant(col):
                     if self.is_prev_K(syllable) and self.is_S(col) and ((next_col is not None and self.is_consonant(next_col)) or next_col is None):
                         syllable.append(col)
+                        syllable_stresses.append(col_stress)
                         syl_name = "_".join(syllable)
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = []
+                        syllable_stresses = []
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     elif self.is_double_consonants(syllable[-1], col):
                         syllable.append(col)
+                        syllable_stresses.append(col_stress)
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     elif next_col is None:
                         # Example microsoft
                         syllable.append(col)
+                        syllable_stresses.append(col_stress)
                         syl_name = "_".join(syllable)
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = []
+                        syllable_stresses = []
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                     else:
                         # Save stand-alone consonant
                         syl_name = "_".join(syllable)
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = [col]
+                        syllable_stresses = [col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                 else:
@@ -267,6 +389,7 @@ class EngParser:
                         if self.is_vowel(next_col):
                             # Cosonant + Y + Vowel + (, M, N, NG, L, R) syllable
                             syllable.append(col)
+                            syllable_stresses.append(col_stress)
                             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
 
                         else:
@@ -301,20 +424,26 @@ class EngParser:
                 # Special handlings are done in TAG002, TAG003, TAG004, TAG005, TAG006, here is no need
                 if self.is_vowel(col):
                     syllable.append(col)
+                    syllable_stresses.append(col_stress)
                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                 elif self.is_consonant(col):
                     if len(syllable) == 1:
                         # Discard
                         syllable = [col]
+                        syllable_stresses = [col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                     elif (self.is_prev_N(syllable) or self.is_prev_NG(syllable)) and (self.is_S(col) or self.is_Z(col) or self.is_T(col)) and next_col is None:
                         syllable.append(col)
+                        syllable_stresses.append(col_stress)
                         syl_name = "_".join(syllable)
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                         syllable = []
+                        syllable_stresses = []
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                     else:
@@ -324,6 +453,7 @@ class EngParser:
                         syllables_map[syl_name] = syllable
                         sound_map[syl_name] = syllable
                         syllable = [col]
+                        syllable_stresses = [col_stress]
                         self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                     
                 else:
@@ -332,17 +462,25 @@ class EngParser:
                             if self.is_prev_L(syllable) and self.is_N(col):
                                 # Example abeln
                                 syllable.append(col)
+                                syllable_stresses.append(col_stress)
                                 syl_name = "_".join(syllable)
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = syllable_stresses
+                                syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                 syllable = []
+                                syllable_stresses = []
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                             
                             elif self.is_Y(col):
                                 # Example MONTAGNE
                                 syllable.append(col)
+                                syllable_stresses.append(col_stress)
                                 syl_name = "_".join(syllable)
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = syllable_stresses
+                                syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                 syllable = []
+                                syllable_stresses = []
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                 
                             else:
@@ -350,7 +488,10 @@ class EngParser:
                                 syllable = [col]
                                 syl_name = "_".join(syllable)
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = [col_stress]
+                                syllable_stress_map[syl_name] = self.get_syllable_stress([col_stress])
                                 syllable = []
+                                syllable_stresses = []
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                             
                         elif (next_col is not None) and self.is_consonant(next_col):
@@ -364,9 +505,13 @@ class EngParser:
                             
                             elif self.is_Y(col):
                                 syllable.append(col)
+                                syllable_stresses.append(col_stress)
                                 syl_name = "_".join(syllable)
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = syllable_stresses
+                                syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                 syllable = []
+                                syllable_stresses = []
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                 
                             else:
@@ -375,43 +520,55 @@ class EngParser:
                                 syllable = [col]
                                 syl_name = "_".join(syllable)
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = [col_stress]
+                                syllable_stress_map[syl_name] = self.get_syllable_stress([col_stress])
                                 syllable = []
+                                syllable_stresses = []
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                             
                         else:
                             # Next is none consonant
                             syllable = [col]
+                            syllable_stresses = [col_stress]
                             self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                         
                     else:
                         if self.is_Y(col):
                             if not self.is_prev_Y(syllable):
                                 syllable.append(col)
+                                syllable_stresses.append(col_stress)
                                 syl_name = "_".join(syllable)
                                 syllables_map[syl_name] = syllable
                                 sound_map[syl_name] = syllable
+                                stress_map[syl_name] = syllable_stresses
+                                syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                                 syllable = [col]
+                                syllable_stresses = [col_stress]
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                 
                             else:
                                 # Double Y, discard
                                 syllable = [col]
+                                syllable_stresses = [col_stress]
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                             
                         else:
                             if syllable[-1] != col:
                                 if (next_col is None) or self.is_consonant(next_col):
                                     syllable.append(col)
+                                    syllable_stresses.append(col_stress)
                                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                     
                                 else:
                                     # Example carnation
                                     syllable = [col]
+                                    syllable_stresses = [col_stress]
                                     self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                                 
                             else:
                                 # Double stand-alone phonem other than vowel and consonant, when the both are the same, discard
                                 syllable = [col]
+                                syllable_stresses = [col_stress]
                                 self.set_path("LN{}-{}".format(inspect.currentframe().f_lineno, syllable))
                             
         if len(syllable) > 0:
@@ -420,12 +577,17 @@ class EngParser:
                     syl_name = "_".join(syllable)
                     syllables_map[syl_name] = syllable
                     sound_map[syl_name] = syllable
+                    stress_map[syl_name] = syllable_stresses
+                    syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                     syllable = []
+                    syllable_stresses = []
                     
                 elif self.is_prev_consonant(syllable):
                     # Save stand-alone consonant
                     syl_name = "_".join(syllable)
                     sound_map[syl_name] = syllable
+                    stress_map[syl_name] = syllable_stresses
+                    syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                     
                 else:
                     # If other than vowel or consonant left
@@ -433,6 +595,8 @@ class EngParser:
                         # Save stand-alone phonem other than vowel or consonant
                         syl_name = "_".join(syllable)
                         sound_map[syl_name] = syllable
+                        stress_map[syl_name] = syllable_stresses
+                        syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                     
             else:
                 # syllable length > 1
@@ -444,12 +608,17 @@ class EngParser:
                     syl_name = "_".join(syllable)
                     syllables_map[syl_name] = syllable
                     sound_map[syl_name] = syllable
+                    stress_map[syl_name] = syllable_stresses
+                    syllable_stress_map[syl_name] = self.get_syllable_stress(syllable_stresses)
                     syllable = []
+                    syllable_stresses = []
 
         if is_print:
             print("Parse path: ", self.parse_path)
+
+        stress_map, syllable_stress_map = self.rebuild_stress_maps(sound_map, original_phonemes)
             
-        return syllables_map, sound_map
+        return syllables_map, sound_map, stress_map, syllable_stress_map
 
     def verify_list(self, phonems):
         if not isinstance(phonems, list):
